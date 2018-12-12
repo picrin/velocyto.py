@@ -45,13 +45,17 @@ def _run(*, bamfile: Tuple[str], gtffile: str,
 
     logging.basicConfig(stream=sys.stdout, format='%(asctime)s - %(levelname)s - %(message)s',
                         level=[logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG][verbose])
-
-    if isinstance(bamfile, tuple) and len(bamfile) > 1 and bamfile[-1][-4:] in [".bam", ".sam"]:
-        multi = True
-    elif isinstance(bamfile, tuple) and len(bamfile) == 1:
-        multi = False
-    else:
-        raise IOError(f"Something went wrong in the argument parsing. You passed as bamfile: {bamfile}")
+    
+    bamfile = [bamfile]
+    multi = False
+    #if isinstance(bamfile, str) and len(bamfile) > 1 and bamfile[-1][-4:] in [".bam", ".sam"]:
+    #    multi = True
+    #elif isinstance(bamfile, str) and len(bamfile) == 1:
+    #    multi = False
+    #else:
+    #    print(type(bamfile))
+    #    print(bamfile, len(bamfile))
+    #    raise IOError(f"Something went wrong in the argument parsing. You passed as bamfile: {bamfile}")
 
     if onefilepercell and multi:
         if bcfile is not None:
@@ -95,7 +99,7 @@ def _run(*, bamfile: Tuple[str], gtffile: str,
         valid_bcset = None
     else:
         # Get valid cell barcodes
-        valid_bcs_list = (gzip.open(bcfile).read().decode() if bcfile.endswith(".gz") else open(bcfile).read()).rstrip().split()
+        valid_bcs_list = open(bcfile).read().rstrip().split()
         valid_cellid_list = np.array([f"{sampleid}:{v_bc}" for v_bc in valid_bcs_list])  # with sample id and with -1
         if len(set(bc.split('-')[0] for bc in valid_bcs_list)) == 1:
             gem_grp = f"-{valid_bcs_list[0].split('-')[-1]}"
@@ -167,9 +171,11 @@ def _run(*, bamfile: Tuple[str], gtffile: str,
         bamfile_cellsorted = [f"{os.path.join(os.path.dirname(bmf), 'cellsorted_' + os.path.basename(bmf))}" for bmf in bamfile]
 
     sorting_process: Dict[int, Any] = {}
+    print("!!!!!!", bamfile_cellsorted)
     for ni, bmf_cellsorted in enumerate(bamfile_cellsorted):
         # Start a subprocess that sorts the bam file
         command = f"samtools sort -l {compression} -m {mb_to_use}M -t {tagname} -O BAM -@ {threads_to_use} -o {bmf_cellsorted} {bamfile[ni]}"
+        print("!!!!!!", command)
         if os.path.exists(bmf_cellsorted):
             # This should skip sorting in smartseq2
             logging.warning(f"The file {bmf_cellsorted} already exists. The sorting step will be skipped and the existing file will be used.")
